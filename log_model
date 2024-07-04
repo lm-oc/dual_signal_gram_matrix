@@ -1,0 +1,9 @@
+resnet18                46.963%         效果不好                  ressl-cross2.pth    400epoch
+convformer_s36          46.333%         效果不好                  ressl-cross3.pth    10epoch
+caformer_b36            训练效果不好，loss后来升到了8.多，还没测试     ressl-cross4.pth    25epoch
+
+convnext_base           56.076%         0.015                   ressl-cross1.pth    10epoch
+convnext_base           58.966%         64\64 0.015\0.015       ressl-cross5.pth    20epoch
+convnext_base+mixup+480 效果特别差        16\16 0.00375\0.00375   ressl-cross6.pth    20epoch
+convnext_base+480       59.418%         16\16 0.00375\0.00375   ressl-cross7.pth    20epoch
+convnext_base+480       59.060%         16\16 0.00375\0.0125    ressl-cross8.pth    30epoch
