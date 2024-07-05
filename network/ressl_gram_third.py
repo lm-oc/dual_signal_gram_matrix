@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from network.base_model import ModelBaseMoCo_234
+from network.base_model import ModelBaseMoCo
 from network.head import MoCoHead
 import torch.nn.functional as F
 from scipy.spatial.distance import pdist
@@ -167,14 +167,14 @@ class ReSSL(nn.Module):
         self.m = m
 
         # create the encoders
-        self.net = ModelBaseMoCo_234(dataset=dataset, bn_splits=bn_splits)
+        self.net = ModelBaseMoCo(dataset=dataset, bn_splits=bn_splits)
 
         self.pool = nn.AdaptiveAvgPool2d(1)
         # self.conv = nn.Conv2d(1024,256, kernel_size=1, stride=1, padding=1, bias=False)
         self.flatten = nn.Flatten(1)
 
-        self.encoder_k = ModelBaseMoCo_234(dataset=dataset, bn_splits=bn_splits)
-        self.encoder_style = ModelBaseMoCo_234(dataset=dataset, bn_splits=bn_splits)
+        self.encoder_k = ModelBaseMoCo(dataset=dataset, bn_splits=bn_splits)
+        self.encoder_style = ModelBaseMoCo(dataset=dataset, bn_splits=bn_splits)
 
         self.head_q = MoCoHead(input_dim=1024)
         self.head_k = MoCoHead(input_dim=1024)
@@ -269,7 +269,7 @@ class ReSSL(nn.Module):
 
         # compute query features
         # qfe1, qfe2, qfe3, q = self.net(im1)
-        q, qack1, qack2 = self.net(im1)  # queries: NxC
+        q = self.net(im1)  # queries: NxC
         # print(q.shape)
         gram_im1_feature = q
 
@@ -286,7 +286,7 @@ class ReSSL(nn.Module):
             im_k_, idx_unshuffle = self._batch_shuffle_single_gpu(im2)
 
             # kfe1, kfe2, kfe3, k = self.encoder_k(im_k_)
-            k, kack1, kack2 = self.encoder_k(im_k_)  # keys: NxC
+            k = self.encoder_k(im_k_)  # keys: NxC
             gram_im2_feature = k
 
             k = self.pool(k)
@@ -299,7 +299,7 @@ class ReSSL(nn.Module):
             im_style_, idx_unshuffle_style = self._batch_shuffle_single_gpu(im3)
             im_style_.cuda()
             # vfe1, vfe2, vfe3, v = self.encoder_style(im_style_)
-            v, vack1, vack2 = self.encoder_style(im_style_)  # keys: NxC
+            v = self.encoder_style(im_style_)  # keys: NxC
             gram_im3_feature = v
 
             v = self.pool(v)
@@ -317,16 +317,11 @@ class ReSSL(nn.Module):
         loss_qv = - torch.sum(F.softmax(logits_v.detach() / 0.04, dim=1) * F.log_softmax(logits_q / 0.1, dim=1),
                               dim=1).mean()
 
-        loss4_gram = gram_loss(gram_im1_feature, gram_im2_feature) * 0.5 + gram_loss(gram_im1_feature, gram_im3_feature) * 0.5
-
-        loss3_gram = gram_loss(qack1, kack1) * 0.5 + gram_loss(qack1, vack1) * 0.5
-        loss2_gram = gram_loss(qack2, kack2) * 0.5 + gram_loss(qack2, vack2) * 0.5
-        # loss4_gram = gram_loss(qack3, kack3) * 0.5 + gram_loss(qack3, vack3) * 0.5
+        loss2 = gram_loss(gram_im1_feature, gram_im2_feature) 
+        loss3 = gram_loss(gram_im1_feature, gram_im3_feature)
 
         self._dequeue_and_enqueue(k)
         self._dequeue_and_enqueue(v)
-        return loss2_gram, loss3_gram, loss4_gram, loss_qk, loss_qv
-        # return loss3, loss2, rkd_dist_loss,  rkd_angle_loss
-        # return loss3, loss2, loss_qk, loss_qv, loss_1, loss_2, loss_3
+        return loss2, loss3, loss_qk, loss_qv
 
 
