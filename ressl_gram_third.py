@@ -47,19 +47,14 @@ def adjust_learning_rate(optimizer, epoch, base_lr, i, iteration_per_epoch):
 def train(train_loader, model, optimizer, epoch, iteration_per_epoch, base_lr):
     batch_time = AverageMeter('Time', ':6.3f')
     data_time = AverageMeter('Data', ':6.3f')
-    # losses = AverageMeter('gram', ':.4e')
+    losses = AverageMeter('CE_', ':.4e')
     ce_losses = AverageMeter('CE', ':.4e')
     losses3 = AverageMeter('loss3', ':.4e')
     losses4 = AverageMeter('loss4', ':.4e')
-    losses5 = AverageMeter('loss5', ':.4e')
-    losses6 = AverageMeter('loss6', ':.4e')
-    # losses_1 = AverageMeter('loss_1', ':.4e')
-    # losses_2 = AverageMeter('loss_2', ':.4e')
-    # losses_3 = AverageMeter('loss_3', ':.4e')
 
     progress = ProgressMeter(
         len(train_loader),
-        [batch_time, data_time, ce_losses, losses3, losses4, losses5, losses6],
+        [batch_time, data_time, ce_losses, losses, losses3, losses4],
         prefix="Epoch: [{}]".format(epoch))
 
     # switch to train mode
@@ -74,24 +69,17 @@ def train(train_loader, model, optimizer, epoch, iteration_per_epoch, base_lr):
         img3 = img3.cuda(non_blocking=True)
 
         # compute output
-        # loss = model(img1, img2)
-        # loss1, output, target, loss2 = model(img1, img2)
-        # loss1, loss3, loss2 = model(img1, img2)
-        # loss3 = criterion(output, target)
-        losss2, losss3, losss4, loss2, loss3 = model(img1, img2, img3)
+        
+        loss3, loss4, loss1, loss2 = model(img1, img2, img3)
 
-        loss = losss2 + losss3 + losss4 + loss2 * 0.5 + loss3 * 0.5
+        loss = loss1 + loss2 + loss3 * 0.5 + loss4 * 0.5
         # acc1/acc5 are (K+1)-way contrast classifier accuracy
         # measure accuracy and record loss
-        ce_losses.update(loss2.item(), img1.size(0))
+        ce_losses.update(loss1.item(), img1.size(0))
+        losses.update(loss2.item(), img1.size(0))
         losses3.update(loss3.item(), img1.size(0))
-        # losses.update(losss1.item(), img1.size(0))
-        losses4.update(losss2.item(), img1.size(0))
-        losses5.update(losss3.item(), img1.size(0))
-        losses6.update(losss4.item(), img1.size(0))
-        # losses_1.update(loss_1.item(), img1.size(0))
-        # losses_2.update(loss_2.item(), img1.size(0))
-        # losses_3.update(loss_3.item(), img1.size(0))
+        losses4.update(loss4.item(), img1.size(0))
+        
 
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -105,7 +93,7 @@ def train(train_loader, model, optimizer, epoch, iteration_per_epoch, base_lr):
         if i % 10 == 0:
             progress.display(i)
     # 在for循环之外
-    average_loss = (ce_losses.avg + losses3.avg + losses4.avg + losses5.avg + losses6.avg) / 6
+    average_loss = (ce_losses.avg + losses.avg + losses3.avg + losses4.avg) / 4
     return average_loss
 
 def validate(val_loader, model):
@@ -120,8 +108,8 @@ def validate(val_loader, model):
             img2 = img2.cuda(non_blocking=True)
             img3 = img3.cuda(non_blocking=True)
 
-            losss2, losss3, losss4, loss2, loss3 = model(img1, img2, img3)
-            loss = losss2 + losss3 + losss4 + loss2 * 0.5 + loss3 * 0.5
+            loss3, loss4, loss1, loss2 = model(img1, img2, img3)
+            loss = loss1 + loss2 + loss3 * 0.5 + loss4 * 0.5
 
             total_loss += loss.item() * img1.size(0)
             total_samples += img1.size(0)
@@ -192,7 +180,7 @@ def main():
                             drop_last=True)
     iteration_per_epoch = train_loader.__len__()
 
-    checkpoint_path = 'checkpoints/bgt-gggram-{}.pth'.format(args.dataset)
+    checkpoint_path = 'checkpoints/bgt-{}.pth'.format(args.dataset)
     print('checkpoint_path:', checkpoint_path)
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
@@ -230,15 +218,6 @@ def main():
 
     # 将数据保存到文件
     np.save('./log/average_losses.npy', average_losses)
-
-    # plt.figure()
-    # plt.plot(range(start_epoch, epochs), average_losses, '-', label='Average Loss', color='lightblue')  # 修改颜色为淡蓝色
-    # plt.title('Loss over Epochs')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.legend()
-    # plt.grid(True)
-    # plt.savefig('./log/AVA_loss_1.png', format='png', dpi=300)  # 您可以根据需要更改文件名和格式
 
 if __name__ == "__main__":
     main()
