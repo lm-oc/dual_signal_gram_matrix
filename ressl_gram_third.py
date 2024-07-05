@@ -72,7 +72,7 @@ def train(train_loader, model, optimizer, epoch, iteration_per_epoch, base_lr):
         
         loss3, loss4, loss1, loss2 = model(img1, img2, img3)
 
-        loss = loss1 + loss2 + loss3 * 0.5 + loss4 * 0.5
+        loss = loss1 * 0.5 + loss2 * 0.5 + loss3 * 0.5 + loss4 * 0.5
         # acc1/acc5 are (K+1)-way contrast classifier accuracy
         # measure accuracy and record loss
         ce_losses.update(loss1.item(), img1.size(0))
@@ -109,7 +109,7 @@ def validate(val_loader, model):
             img3 = img3.cuda(non_blocking=True)
 
             loss3, loss4, loss1, loss2 = model(img1, img2, img3)
-            loss = loss1 + loss2 + loss3 * 0.5 + loss4 * 0.5
+            loss = loss1 * 0.5 + loss2 * 0.5 + loss3 * 0.5 + loss4 * 0.5
 
             total_loss += loss.item() * img1.size(0)
             total_samples += img1.size(0)
